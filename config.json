@@ -1,0 +1,184 @@
+{
+    "name": "Report Scheduler",
+    "description": "Set up a schedule on which to run a report and email it to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.</b> With the default permission option (&quot;Design&quot;) a user with &quot;Design&quot; but not &quot;User Rights&quot; permissions could circumvent any export restriction on their role by setting up a scheduled report with the &quot;Full data set&quot; option.",
+    "namespace": "MCRI\\ReportScheduler",
+    "authors": [
+        {
+            "name": "Luke Stevens",
+            "email": "luke.stevens@mcri.edu.au",
+            "institution": "Murdoch Children's Research Institute"
+        }
+    ],
+    "framework-version": 3,
+    "compatibility": {
+        "redcap-version-min": "9.1.1"
+    },
+    "permissions": [
+    ],
+    "crons": [
+        {
+            "cron_name": "extmod_report_scheduler",
+            "cron_description": "Find, run and send any reports that need sending.",
+            "method": "cronEntry",
+            "cron_frequency": "600",
+            "cron_max_run_time": "500"
+        }
+    ],
+    "no-auth-pages": [
+        "run_project_reports",
+        "testnoauth"
+    ],
+    "links": {
+        "control-center": [
+            {
+                "name": "Report Scheduler test page",
+                "icon": "fas fa-clock",
+                "url": "testnoauth.php?NOAUTH",
+                "show-header-and-footer": true
+            }
+        ]
+    },
+    "system-settings": [
+    ],
+    "project-settings": [
+        {
+            "name": "<span class='badge badge-lg badge-primary' style='font-size:1.25rem;'>Scheduled Report</span>",
+            "key": "scheduled-report",
+            "type": "sub_settings",
+            "repeatable": true,
+            "sub_settings": [
+                {
+                    "name": "Enabled",
+                    "key": "schedule-enabled",
+                    "type": "checkbox"
+                },
+                {
+                    "name": "<span class='badge badge-lg badge-info' style='font-size:1rem;'>Report</span>",
+                    "key": "report-desc",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "report-id",
+                    "name": "Report ID",
+                    "required": true,
+                    "type": "text"
+                },
+                {
+                    "key": "report-rights",
+                    "name": "Run with export permissions",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        { "value": "2", "name": "De-Identified" },
+                        { "value": "3", "name": "Remove Tagged Identifier Fields" },
+                        { "value": "1", "name": "Full Data Set" }
+                    ]
+                },
+                {
+                    "key": "report-format",
+                    "name": "Export format",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        { "value": "csvraw", "name": "CSV (Raw)" },
+                        { "value": "csvlabels", "name": "CSV (Labels)" }
+                    ]
+                },
+                {
+                    "name": "<span class='badge badge-lg badge-info' style='font-size:1rem;'>Schedule</span>",
+                    "key": "schedule-desc",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "schedule-freq",
+                    "name": "Send frequency (send every ...)",
+                    "required": true,
+                    "type": "text"
+                },
+                {
+                    "key": "schedule-freq-unit",
+                    "name": "Send frequency unit",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        { "value": "h", "name": "Hours" },
+                        { "value": "d", "name": "Days" },
+                        { "value": "m", "name": "Month" },
+                        { "value": "y", "name": "Years" }
+                    ]
+                },
+                {
+                    "key": "schedule-start",
+                    "name": "Starting from date/time (YYYY-MM-DD HH:MM:SS)",
+                    "required": true,
+                    "type": "text"
+                },
+                {
+                    "key": "schedule-end",
+                    "name": "Until date/time (YYYY-MM-DD HH:MM:SS)<br>(Optional)",
+                    "required": false,
+                    "type": "text"
+                },
+                {
+                    "name": "<span class='badge badge-lg badge-info' style='font-size:1rem;'>Message</span>",
+                    "key": "message-desc",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "message-from-user",
+                    "name": "Message sender (user)",
+                    "type": "user-list",
+                    "required": true
+                },
+                {
+                    "key": "message-from-user-123",
+                    "name": "Use user's primary, secondary or tertiary email?<br>Note: emails will not be sent if the selected email address is not present in the user's profile.",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        { "value": "1", "name": "Primary" },
+                        { "value": "2", "name": "Secondary" },
+                        { "value": "3", "name": "Tertiary" }
+                    ]
+                },
+                {
+                    "key": "message-recipients",
+                    "name": "Recipients",
+                    "type": "sub_settings",
+                    "repeatable": true,
+                    "sub_settings": [
+                        {
+                            "key": "recipient-email",
+                            "name": "Recipient email",
+                            "required": true,
+                            "type": "email"
+                        }
+                    ]
+                },
+                {
+                    "key": "message-subject",
+                    "name": "Subject line of email",
+                    "required": true,
+                    "type": "text"
+                },
+                {
+                    "key": "message-body",
+                    "name": "Message body",
+                    "required": true,
+                    "type": "rich-text"
+                },
+                {
+                    "key": "schedule-last",
+                    "name": "Last run date/time (YYYY-MM-DD HH:MM:SS)<br>(Updated automatically)",
+                    "required": false,
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "name": "Enable additional logging to project event log",
+            "key": "logging",
+            "type": "checkbox"
+        }
+    ]
+}
