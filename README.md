@@ -11,7 +11,8 @@ Create a schedule on which to run a report and email it to a list of recipients.
 **WARNING: THIS MODULE MAKES IT POSSIBLE TO SEND PARTICIPANT IDENTIFYING DATA (PHI) TO PEOPLE THAT SHOULD NOT HAVE ACCESS TO IT.**
 **BE CAREFUL!**
 
-**It is strongly recommended that this module is configured to require a module-specific permission. With the default "design" permission option a user with "design" but not "user rights" permissions could circumvent any export restriction on their role by setting up a scheduled report with the "Full data set" option.**
+**It is strongly recommended that this module is configured to require a module-specific permission.**
+With the default "Design" permission option a user with "Design" but not "User Rights" permissions could circumvent any export restriction on their role by setting up a scheduled report with the "Full data set" option.
 
 ## Configuration
 
@@ -31,6 +32,7 @@ Scheduled reports are configured on the external module configuration page. You 
 ## Notes
 
 * The module utilises a scheduled task running every 10 minutes to check whether any scheduled report is due.
+* **It is strongly recommended that this module is configured to require a module-specific permission.**
 * **THIS MODULE MAKES IT POSSIBLE TO SEND PARTICIPANT IDENTIFYING DATA (PHI) TO PEOPLE THAT SHOULD NOT HAVE ACCESS TO IT. BE CAREFUL!**
 
 ********************************************************************************

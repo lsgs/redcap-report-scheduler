@@ -1,6 +1,6 @@
 {
     "name": "Report Scheduler",
-    "description": "Set up a schedule on which to run a report and email it to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.</b> With the default permission option (&quot;Design&quot;) a user with &quot;Design&quot; but not &quot;User Rights&quot; permissions could circumvent any export restriction on their role by setting up a scheduled report with the &quot;Full data set&quot; option.",
+    "description": "Set up a schedule on which to run a report and email it to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.",
     "namespace": "MCRI\\ReportScheduler",
     "authors": [
         {
@@ -13,8 +13,6 @@
     "compatibility": {
         "redcap-version-min": "9.1.1"
     },
-    "permissions": [
-    ],
     "crons": [
         {
             "cron_name": "extmod_report_scheduler",
@@ -154,6 +152,11 @@
                             "type": "email"
                         }
                     ]
+                },
+                {
+                    "name": "<div class='red text-center'>IT IS YOUR RESPONSIBILITY TO ENSURE THAT ALL RECIPIENTS ARE PERMITTED TO RECEIVE THE DATA CONTAINED IN THE REPORT, E.G. PARTICIPANT IDENTIFYING DATA (PHI). BE CAREFUL!</div>",
+                    "key": "recipients-desc",
+                    "type": "descriptive"
                 },
                 {
                     "key": "message-subject",
