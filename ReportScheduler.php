@@ -49,7 +49,7 @@ class ReportScheduler extends AbstractExternalModule
                                         //**************************************
                                         
                                         $msg = 'Scheduled Report processing complete for project id='.$this->project->project_id.PHP_EOL.$projectUrl.PHP_EOL.print_r($result,true);
-                                        $this->log($msg, true);
+                                        $this->logmsg($msg, true);
                                 } catch (Exception $e) {
                                         \REDCap::logEvent($this->PREFIX . " exception: " . $e->getMessage(), '', '', null, null, $project_id);
                                 }
@@ -71,14 +71,14 @@ class ReportScheduler extends AbstractExternalModule
                         if ($rpt->isDue()) { 
                             
                                 $msg = 'Project id='.$this->project->project_id.': Scheduled Report index '.$rpt->getSettingsPageIndex().' is due';
-                                $this->log($msg);
+                                $this->logmsg($msg);
                                 
                                 list($data_doc_id, $syntax_doc_id) = $this->exportReport($rpt);
 
                                 if (is_null($data_doc_id)) {
                                         $msg = 'Failed to export report id '.$rpt->getReportId();
                                         $result['failed']++;
-                                        $this->log($msg);
+                                        $this->logmsg($msg);
                                         continue;
                                 } else {
                                         $data_edoc_id = db_result(db_query("select doc_id from redcap_docs_to_edocs where docs_id = ". db_escape($data_doc_id)), 0);
@@ -109,14 +109,14 @@ class ReportScheduler extends AbstractExternalModule
                                                 $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($this, true);
                                                 $result['failed']++;
                                         }
-                                        $this->log($msg);
+                                        $this->logmsg($msg);
                                 }
 
                         } else {
 
                                 $msg = 'Project id='.$this->project->project_id.': Scheduled Report index '.$rpt->getSettingsPageIndex().' is NOT due';
                                 $result['not_due']++;
-                                $this->log($msg);
+                                $this->logmsg($msg);
                         }
                 }
                 return $result;
@@ -127,7 +127,7 @@ class ReportScheduler extends AbstractExternalModule
                 $project_settings = $this->getProjectSettings($this->project->project_id);
                 
                 //$msg = 'Cron extmod_report_scheduler: project='.$this->project->project_id.' settings='.print_r($project_settings, true);
-                //$this->log($msg);
+                //$this->logmsg($msg);
                 
                 if (is_array($project_settings['scheduled-report']['value'])) { 
                     foreach ($project_settings['scheduled-report']['value'] as $key => $value) {
@@ -165,6 +165,13 @@ class ReportScheduler extends AbstractExternalModule
                 $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
                 $sql = "select $fieldname from redcap_user_information where username = '". db_escape($fromUser)."'";
                 return db_result(db_query($sql), 0);
+        }
+        
+        protected function getReportTitle($project_id, $report_id) {
+                $sql = "select title from redcap_reports where project_id=". db_escape($project_id)." and report_id=". db_escape($report_id);
+                $title = db_result(db_query($sql), 0);
+                if (empty($title)) { $title = "ERROR: Report is $report_id not found in current project."; }
+                return $title;
         }
         
         /**
@@ -224,7 +231,7 @@ class ReportScheduler extends AbstractExternalModule
                 return array($data_edoc_id, $syntax_edoc_id);
         }
         
-        protected function log($msg, $always=false) {
+        public function logmsg($msg, $always=false) {
                 global $Proj;
                 if (!defined('PROJECT_ID') && isset($Proj)) { // e.g. in cronEntry()
                         $this->logging = (bool)$this->framework->getProjectSetting('logging', $Proj->project_id);
@@ -233,4 +240,30 @@ class ReportScheduler extends AbstractExternalModule
                         $this->framework->log($msg);
                 }
         }
+        
+        /**
+         * redcap_module_save_configuration
+         * Look up report ids and populate report-title settings
+         * Look up user/profile and populate message-from-address settings
+         * @param string $project_id
+         */
+        public function redcap_module_save_configuration($project_id) {
+                $project_settings = $this->getProjectSettings($this->project->project_id);
+                
+                if (is_array($project_settings['scheduled-report']['value'])) { 
+                    foreach ($project_settings['scheduled-report']['value'] as $key => $value) {
+                            if (!$value) { continue; }
+
+                            $reportId = $project_settings['report-id']['value'][$key];
+                            $project_settings['report-title']['value'][$key] = $this->getReportTitle($project_id, $reportId);
+                            
+                            $fromUser = $project_settings['message-from-user']['value'][$key];
+                            $fromUser123 = $project_settings['message-from-user-123']['value'][$key];
+                            $project_settings['message-from-address settings']['value'][$key] = $this->getUserEmail($fromUser, $fromUser123);
+                    }
+                }
+                $this->setProjectSetting('report-title', $project_settings['report-title']['value']);
+                $this->setProjectSetting('message-from-address', $project_settings['message-from-address settings']['value']);
+                return;
+       }
 }

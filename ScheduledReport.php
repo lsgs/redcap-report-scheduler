@@ -70,11 +70,18 @@ class ScheduledReport {
                 $to = ($this->getActiveTo() instanceof \DateTime) ? $this->getActiveTo() : (new \DateTime())->setTimestamp(PHP_INT_MAX>>32); // 2038-01-19 04:14:07
                 $last = ($this->getLastSent() instanceof \DateTime) ? $this->getLastSent() : (new \DateTime())->setTimestamp(0); // 1970-01-01 00:00:00;
                 
-                $interval_spec = ($this->getFrequencyUnit()=='h')
-                        ? 'PT'.$this->getFrequency().'H'
-                        : 'P'.$this->getFrequency().strtoupper($this->getFrequencyUnit());
-                
-                $next = (clone $last)->add(new \DateInterval($interval_spec));
+                if ($this->getFrequencyUnit()=='h') {
+                        // hourly sending - add hour to last sent and round back to last hour hh:00
+                        $interval_spec = 'PT'.$this->getFrequency().'H';
+                        $next = new \DateTime($last->format('Y-m-d H:00:00'));
+                        $next->add(new \DateInterval($interval_spec));
+                } else {
+                        // daily/monthly/yearly sending - use time component of from datetime as (approx) send time
+                        $interval_spec = 'P'.$this->getFrequency().strtoupper($this->getFrequencyUnit());
+                        $fromHr = $from->format('H');
+                        $next = (clone $last)->add(new \DateInterval($interval_spec));
+                        $next->setTime($fromHr, 0, 0, 0);
+                }
                 
                 return $now >= $from && $now <= $to && $now >= $next;
         }

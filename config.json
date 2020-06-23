@@ -13,6 +13,10 @@
     "compatibility": {
         "redcap-version-min": "9.1.1"
     },
+    "permissions": [
+        "redcap_module_save_configuration"
+    ],
+    "enable-every-page-hooks-on-system-pages": false,
     "crons": [
         {
             "cron_name": "extmod_report_scheduler",
@@ -59,6 +63,12 @@
                     "key": "report-id",
                     "name": "Report ID",
                     "required": true,
+                    "type": "text"
+                },
+                {
+                    "name": "<span class='text-muted'>Report title<br><b>NB. For information only.</b><br>Value is set automatically on save. Anything you enter here will just get overwritten by the title of the report with the ID you enter above</span>",
+                    "key": "report-title",
+                    "required": false,
                     "type": "text"
                 },
                 {
@@ -138,6 +148,12 @@
                         { "value": "2", "name": "Secondary" },
                         { "value": "3", "name": "Tertiary" }
                     ]
+                },
+                {
+                    "name": "<span class='text-muted'>Message from address<br><b>NB. For information only.</b><br>Value is set automatically on save. Anything you enter here will just get overwritten by the nominated email address of the user you select above</span>",
+                    "key": "message-from-address",
+                    "required": false,
+                    "type": "text"
                 },
                 {
                     "key": "message-recipients",
