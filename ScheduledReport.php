@@ -79,7 +79,8 @@ class ScheduledReport {
                         // daily/monthly/yearly sending - use time component of from datetime as (approx) send time
                         $interval_spec = 'P'.$this->getFrequency().strtoupper($this->getFrequencyUnit());
                         $fromHr = $from->format('H');
-                        $next = (clone $last)->add(new \DateInterval($interval_spec));
+                        $next = (clone $last);
+                        $next->add(new \DateInterval($interval_spec));
                         $next->setTime($fromHr, 0, 0, 0);
                 }
                 
