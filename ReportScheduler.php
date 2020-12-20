@@ -248,6 +248,8 @@ class ReportScheduler extends AbstractExternalModule
          * @param string $project_id
          */
         public function redcap_module_save_configuration($project_id) {
+                if (is_null($project_id) || !is_numeric($project_id)) { return; } // only continue for project-level config changes
+
                 $project_settings = $this->getProjectSettings($this->project->project_id);
                 
                 if (is_array($project_settings['scheduled-report']['value'])) { 
