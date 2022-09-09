@@ -9,9 +9,9 @@
             "institution": "Murdoch Children's Research Institute"
         }
     ],
-    "framework-version": 3,
+    "framework-version": 8,
     "compatibility": {
-        "redcap-version-min": "9.1.1"
+        "redcap-version-min": "11.1.1"
     },
     "permissions": [
         "redcap_module_save_configuration"
@@ -40,7 +40,7 @@
             }
         ]
     },
-    "system-settings": [
+    "system-settings": [ 
     ],
     "project-settings": [
         {
@@ -131,6 +131,11 @@
                     "name": "<span class='badge badge-lg badge-info' style='font-size:1rem;'>Message</span>",
                     "key": "message-desc",
                     "type": "descriptive"
+                },
+                {
+                    "name": "Suppress message if report is empty",
+                    "key": "suppress-empty",
+                    "type": "checkbox"
                 },
                 {
                     "key": "message-from-user",

@@ -19,14 +19,14 @@ class ReportScheduler extends AbstractExternalModule
         public function __construct() {
                 parent::__construct();
                 if (defined('PROJECT_ID')) {
-                       $this->logging = (bool)$this->framework->getProjectSetting('logging');
+                       $this->logging = (bool)$this->getProjectSetting('logging');
                 }
         }
         
         public function cronEntry() {
                 global $Proj, $user_rights;
                 $user_rights['reports'] = 1;
-                $projects = $this->framework->getProjectsWithModuleEnabled();
+                $projects = $this->getProjectsWithModuleEnabled();
 
                 if (count($projects) > 0) {
                         foreach($projects as $project_id) {
@@ -49,8 +49,8 @@ class ReportScheduler extends AbstractExternalModule
                                         //**************************************
                                         
                                         $msg = 'Scheduled Report processing complete for project id='.$this->project->project_id.PHP_EOL.$projectUrl.PHP_EOL.print_r($result,true);
-                                        $this->logmsg($msg, true);
-                                } catch (Exception $e) {
+                                        $this->logmsg($msg, false);
+                                } catch (\Exception $e) {
                                         \REDCap::logEvent($this->PREFIX . " exception: " . $e->getMessage(), '', '', null, null, $project_id);
                                 }
                         }
@@ -59,7 +59,8 @@ class ReportScheduler extends AbstractExternalModule
         
         public function run() {
                 global $Proj;
-                $result = array('not_due'=>0,'sent'=>0,'failed'=>0);
+                if (!defined('USERID')) define('USERID', $this->PREFIX); // used in \DataExport, required to prevent exceptions for PHP 8
+                $result = array('not_due'=>0,'sent'=>0,'failed'=>0,'empty_suppressed'=>0);
                 if (is_null($Proj)) {
                         $Proj = new \Project($_GET['pid']);
                 }
@@ -81,11 +82,18 @@ class ReportScheduler extends AbstractExternalModule
                                         $this->logmsg($msg);
                                         continue;
                                 } else {
-                                        $data_edoc_id = db_result(db_query("select doc_id from redcap_docs_to_edocs where docs_id = ". db_escape($data_doc_id)), 0);
+                                        $q = $this->query("select doc_id from redcap_docs_to_edocs where docs_id = ?", [$data_doc_id]);
+                                        $qread = db_fetch_assoc($q);
+                                        $data_edoc_id = $qread["doc_id"];
+
                                         list ($mimeType, $docName, $fileContent) = \Files::getEdocContentsAttributes($data_edoc_id);
-                                        $gzipped = db_result(db_query("select gzipped from redcap_edocs_metadata where doc_id = ". db_escape($data_edoc_id)), 0);
-                                        $storedName = db_result(db_query("select stored_name from redcap_edocs_metadata where doc_id = ". db_escape($data_edoc_id)), 0);
                                         
+                                        $q = $this->query("select gzipped, stored_name, doc_size from redcap_edocs_metadata where doc_id = ?", [$data_edoc_id]);
+                                        $qread = db_fetch_assoc($q);
+                                        $gzipped = $qread["gzipped"];
+                                        $storedName = $qread["stored_name"];
+                                        $docSize = $qread["doc_size"];
+
                                         // write uncompressed file contents to temp dir so can attach frome there
                                         // when file name begins with 14-digit timestamp the cron job will delete it after 30min
                                         if ($gzipped) {
@@ -96,20 +104,28 @@ class ReportScheduler extends AbstractExternalModule
                                         }
 
                                         file_put_contents($tempDirStoredName, $fileContent);
-                                        
-                                        $rpt->getMessage()->setAttachment($tempDirStoredName, $docName);
-                                        
-                                        if ($rpt->getMessage()->send()) {
-                                                $lastSetTimes = $this->getProjectSetting('schedule-last');
-                                                $lastSetTimes[$rpt->getSRId()] = date('Y-m-d H:i:s');
+
+                                        $lastSetTimes = $this->getProjectSetting('schedule-last');
+                                        $lastSetTimes[$rpt->getSRId()] = date('Y-m-d H:i:s');
+
+                                        if (strlen($fileContent[0])<2 && $rpt->getSuppressEmpty()) { // $fileContent[0] = '"' when empty
                                                 $this->setProjectSetting('schedule-last', $lastSetTimes);
-                                                $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} sent";
-                                                $result['sent']++;
+                                                $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} due but contains no records. Message not sent.";
+                                                $result['empty_suppressed']++;
                                         } else {
-                                                $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($this, true);
-                                                $result['failed']++;
+                                                $rpt->getMessage()->setAttachment($tempDirStoredName, $docName);
+                                            
+                                                if ($rpt->getMessage()->send()) {
+                                                        $this->setProjectSetting('schedule-last', $lastSetTimes);
+                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} sent";
+                                                        $result['sent']++;
+                                                } else {
+                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($this, true);
+                                                        $result['failed']++;
+                                                }
+
                                         }
-                                        $this->logmsg($msg);
+                                        $this->logmsg($msg, true);
                                 }
 
                         } else {
@@ -128,35 +144,35 @@ class ReportScheduler extends AbstractExternalModule
                 
                 //$msg = 'Cron extmod_report_scheduler: project='.$this->project->project_id.' settings='.print_r($project_settings, true);
                 //$this->logmsg($msg);
-                
-                if (is_array($project_settings['scheduled-report']['value'])) { 
-                    foreach ($project_settings['scheduled-report']['value'] as $key => $value) {
-                            if (!$value) { continue; }
-                            if (!$project_settings['schedule-enabled']['value'][$key]) { continue; }
-                            $report = new ScheduledReport();
 
-                            $report->setSRId($key);
-                            $report->setReportId($project_settings['report-id']['value'][$key]);
-                            $report->setPermissionLevel($project_settings['report-rights']['value'][$key]);
-                            $report->setReportFormat($project_settings['report-format']['value'][$key]);
-                            $report->setFrequency($project_settings['schedule-freq']['value'][$key]);
-                            $report->setFrequencyUnit($project_settings['schedule-freq-unit']['value'][$key]);
-                            $report->setActiveFrom($project_settings['schedule-start']['value'][$key]);
-                            $report->setActiveTo($project_settings['schedule-end']['value'][$key]);
-                            $report->setLastSent($project_settings['schedule-last']['value'][$key]);
-                            
-                            $fromUser = $project_settings['message-from-user']['value'][$key];
-                            $fromUser123 = $project_settings['message-from-user-123']['value'][$key];
-                            $from = $this->getUserEmail($fromUser, $fromUser123);
-                            
-                            $report->setMessage(new \Message());
-                            $report->getMessage()->setTo(implode(';',$project_settings['recipient-email']['value'][$key]));
-                            $report->getMessage()->setFrom($from);
-                            $report->getMessage()->setSubject($project_settings['message-subject']['value'][$key]);
-                            $report->getMessage()->setBody($project_settings['message-body']['value'][$key], true);
+                foreach ($project_settings['scheduled-report'] as $key => $value) {
+                        if (!$value) { continue; }
 
-                            $this->project_reports[] = $report;
-                    }
+                        if (!$project_settings['schedule-enabled'][$key]) { continue; }
+                        $report = new ScheduledReport();
+
+                        $report->setSRId($key);
+                        $report->setReportId($project_settings['report-id'][$key]);
+                        $report->setPermissionLevel($project_settings['report-rights'][$key]);
+                        $report->setReportFormat($project_settings['report-format'][$key]);
+                        $report->setFrequency($project_settings['schedule-freq'][$key]);
+                        $report->setFrequencyUnit($project_settings['schedule-freq-unit'][$key]);
+                        $report->setSuppressEmpty($project_settings['suppress-empty'][$key]);
+                        $report->setActiveFrom($project_settings['schedule-start'][$key]);
+                        $report->setActiveTo($project_settings['schedule-end'][$key]);
+                        $report->setLastSent($project_settings['schedule-last'][$key]);
+                        
+                        $fromUser = $project_settings['message-from-user'][$key];
+                        $fromUser123 = $project_settings['message-from-user-123'][$key];
+                        $from = $this->getUserEmail($fromUser, $fromUser123);
+                        
+                        $report->setMessage(new \Message());
+                        $report->getMessage()->setTo(implode(';',$project_settings['recipient-email'][$key]));
+                        $report->getMessage()->setFrom($from);
+                        $report->getMessage()->setSubject($project_settings['message-subject'][$key]);
+                        $report->getMessage()->setBody($project_settings['message-body'][$key], true);
+
+                        $this->project_reports[] = $report;
                 }
                 return;
         }
@@ -186,14 +202,14 @@ class ReportScheduler extends AbstractExternalModule
 
                 //**************************************************************
                 // This section as per REDCap::getReport()
-		// Does user have De-ID rights?
-		$deidRights = ($user_rights['data_export_tool'] == '2');
-		// De-Identification settings
-		$hashRecordID = ($deidRights);
-		$removeIdentifierFields = ($user_rights['data_export_tool'] == '3' || $deidRights);
-		$removeUnvalidatedTextFields = ($deidRights);
-		$removeNotesFields = ($deidRights);
-		$removeDateFields = ($deidRights);
+		        // Does user have De-ID rights?
+		        $deidRights = ($user_rights['data_export_tool'] == '2');
+		        // De-Identification settings
+		        $hashRecordID = ($deidRights);
+		        $removeIdentifierFields = ($user_rights['data_export_tool'] == '3' || $deidRights);
+		        $removeUnvalidatedTextFields = ($deidRights);
+		        $removeNotesFields = ($deidRights);
+		        $removeDateFields = ($deidRights);
                 //**************************************************************
 
                 $csvDelimiter = ','; // TODO add to config
@@ -234,10 +250,10 @@ class ReportScheduler extends AbstractExternalModule
         public function logmsg($msg, $always=false) {
                 global $Proj;
                 if (!defined('PROJECT_ID') && isset($Proj)) { // e.g. in cronEntry()
-                        $this->logging = (bool)$this->framework->getProjectSetting('logging', $Proj->project_id);
+                        $this->logging = (bool)$this->getProjectSetting('logging', $Proj->project_id);
                 }
                 if ($this->logging || $always) {
-                        $this->framework->log($msg);
+                        $this->log($msg);
                 }
         }
         
@@ -250,22 +266,31 @@ class ReportScheduler extends AbstractExternalModule
         public function redcap_module_save_configuration($project_id) {
                 if (is_null($project_id) || !is_numeric($project_id)) { return; } // only continue for project-level config changes
 
-                $project_settings = $this->getProjectSettings($this->project->project_id);
+                $project_settings = $this->getProjectSettings($project_id);
                 
-                if (is_array($project_settings['scheduled-report']['value'])) { 
-                    foreach ($project_settings['scheduled-report']['value'] as $key => $value) {
-                            if (!$value) { continue; }
+                if (!$project_settings['enabled']) { return; }
+                $update = false;
+                foreach ($project_settings['scheduled-report'] as $key => $value) {
+                        if (!$value) { continue; }
 
-                            $reportId = $project_settings['report-id']['value'][$key];
-                            $project_settings['report-title']['value'][$key] = $this->getReportTitle($project_id, $reportId);
-                            
-                            $fromUser = $project_settings['message-from-user']['value'][$key];
-                            $fromUser123 = $project_settings['message-from-user-123']['value'][$key];
-                            $project_settings['message-from-address settings']['value'][$key] = $this->getUserEmail($fromUser, $fromUser123);
-                    }
+                        $reportId = $project_settings['report-id'][$key];
+                        $title = $this->getReportTitle($project_id, $reportId);
+                        if ($title !== $project_settings['report-title'][$key]) {
+                                $project_settings['report-title'][$key] = $title;
+                                $update = true;
+                        }
+                        
+                        $fromUser = $project_settings['message-from-user'][$key];
+                        $fromUser123 = $project_settings['message-from-user-123'][$key];
+                        $useremail = $this->getUserEmail($fromUser, $fromUser123);
+
+                        if ($useremail !== $project_settings['message-from-address'][$key]) {
+                                $project_settings['message-from-address'][$key] = $useremail;
+                                $update = true;
+                        }
+
                 }
-                $this->setProjectSetting('report-title', $project_settings['report-title']['value']);
-                $this->setProjectSetting('message-from-address', $project_settings['message-from-address settings']['value']);
+                if ($update) { $this->setProjectSettings($project_settings, $project_id); }
                 return;
-       }
+        }
 }

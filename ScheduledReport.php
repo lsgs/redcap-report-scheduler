@@ -20,14 +20,15 @@ class ScheduledReport {
         protected $active_from;
         protected $active_to;
         protected $last_sent;
+        protected $suppress_empty;
         protected $message;
         
         public function getSRId() { return $this->srid; }
         public function setSRId($val) { $this->srid = $val; }
         public function getReportId() { return $this->report_id; }
         public function setReportId($val) { $this->report_id = $val; }
-        public function getPermissionLevel() { return $this->$permission_level; }
-        public function setPermissionLevel($val) { $this->$permission_level = $val; }
+        public function getPermissionLevel() { return $this->permission_level; }
+        public function setPermissionLevel($val) { $this->permission_level = $val; }
         public function getReportFormat() { return $this->report_format; }
         public function setReportFormat($val) { $this->report_format = $val; }
         public function getFrequency() { return $this->frequency; }
@@ -40,6 +41,8 @@ class ScheduledReport {
         public function setActiveTo($val) { $this->active_to = $this->setDateTimeFromVal($val); }
         public function getLastSent() { return $this->last_sent; }
         public function setLastSent($val) { $this->last_sent = $this->setDateTimeFromVal($val); }
+        public function getSuppressEmpty() { return $this->suppress_empty; }
+        public function setSuppressEmpty($val) { $this->suppress_empty = $val; }
         public function getMessage() { return $this->message; }
         public function setMessage($val) { 
             if (!($val instanceof \Message)) {

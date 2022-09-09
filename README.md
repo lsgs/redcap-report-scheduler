@@ -22,6 +22,7 @@ Scheduled reports are configured on the external module configuration page. You 
 - Export permissions (De-identified/Remove identifier fields/Full data set)
 - Frequency (every X hours/days/months/years)
 - Date/time range (i.e. the start time and optionally an end time)
+- Suppress the sending of the message if the report output is empty
 - Message details:
   - From email address
   - To email addresses (repeating field)
