@@ -90,9 +90,9 @@ class ReportScheduler extends AbstractExternalModule
                                         
                                         $q = $this->query("select gzipped, stored_name, doc_size from redcap_edocs_metadata where doc_id = ?", [$data_edoc_id]);
                                         $qread = db_fetch_assoc($q);
-                                        $gzipped = $qread["gzipped"];
-                                        $storedName = $qread["stored_name"];
-                                        $docSize = $qread["doc_size"];
+                                        $gzipped = (bool)$qread["gzipped"];
+                                        $storedName = htmlspecialchars($qread["stored_name"], ENT_QUOTES);
+                                        $docSize = intval($qread["doc_size"]);
 
                                         // write uncompressed file contents to temp dir so can attach frome there
                                         // when file name begins with 14-digit timestamp the cron job will delete it after 30min
@@ -179,15 +179,19 @@ class ReportScheduler extends AbstractExternalModule
 
         protected function getUserEmail($fromUser, $fromUser123) {
                 $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
-                $sql = "select $fieldname from redcap_user_information where username = '". db_escape($fromUser)."'";
-                return db_result(db_query($sql), 0);
+                $sql = "select ? from redcap_user_information where username = ? limit 1";
+                $q = $this->query($sql, [$fieldname,$fromUser]);
+                $r = db_fetch_assoc($q);
+                return htmlspecialchars($r[$fieldname], ENT_QUOTES);
         }
         
         protected function getReportTitle($project_id, $report_id) {
-                $sql = "select title from redcap_reports where project_id=". db_escape($project_id)." and report_id=". db_escape($report_id);
-                $title = db_result(db_query($sql), 0);
-                if (empty($title)) { $title = "ERROR: Report is $report_id not found in current project."; }
-                return $title;
+                $sql = "select title from redcap_reports where project_id=? and report_id=? limit 1";
+                $q = $this->query($sql, [$project_id,$report_id]);
+                $r = db_fetch_assoc($q);
+                $title = $r['title'];
+                if (empty($title)) { $title = "ERROR: Report id $report_id not found in current project."; }
+                return htmlspecialchars($title, ENT_QUOTES);
         }
         
         /**
