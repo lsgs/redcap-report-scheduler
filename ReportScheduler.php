@@ -103,6 +103,7 @@ class ReportScheduler extends AbstractExternalModule
                                                 $tempDirStoredName = APP_PATH_TEMP.$storedName;
                                         }
 
+                                        $tempDirStoredName = $this->getSafePath($tempDirStoredName, APP_PATH_TEMP);
                                         file_put_contents($tempDirStoredName, $fileContent);
 
                                         $lastSetTimes = $this->getProjectSetting('schedule-last');
