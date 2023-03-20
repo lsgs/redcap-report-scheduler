@@ -1,6 +1,6 @@
 {
     "name": "Report Scheduler",
-    "description": "Set up a schedule on which to run a report and email it to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.",
+    "description": "Set up a schedule on which to run a report and email it (or a link to it) to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.",
     "namespace": "MCRI\\ReportScheduler",
     "authors": [
         {
