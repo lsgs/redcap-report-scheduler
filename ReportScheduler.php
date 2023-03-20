@@ -114,14 +114,20 @@ class ReportScheduler extends AbstractExternalModule
                                                 $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} due but contains no records. Message not sent.";
                                                 $result['empty_suppressed']++;
                                         } else {
-                                                $rpt->getMessage()->setAttachment($tempDirStoredName, $docName);
-                                            
+                                                $rpt->messagePiping($data_doc_id, $docName);
+
+                                                if ($rpt->getAttachExport()) {
+                                                    $rpt->getMessage()->setAttachment($tempDirStoredName, $docName);
+                                                }
+
                                                 if ($rpt->getMessage()->send()) {
                                                         $this->setProjectSetting('schedule-last', $lastSetTimes);
                                                         $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} sent";
                                                         $result['sent']++;
                                                 } else {
-                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($this, true);
+                                                        $thisForLog = clone $this;
+                                                        $thisForLog->project = $this->project->project_id;
+                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($thisForLog, true)."<br>".print_r($rpt, true);
                                                         $result['failed']++;
                                                 }
 
@@ -153,7 +159,9 @@ class ReportScheduler extends AbstractExternalModule
                         $report = new ScheduledReport();
 
                         $report->setSRId($key);
+                        $report->setPid($this->project->project_id);
                         $report->setReportId($project_settings['report-id'][$key]);
+                        $report->setReportTitle($project_settings['report-title'][$key]);
                         $report->setPermissionLevel($project_settings['report-rights'][$key]);
                         $report->setReportFormat($project_settings['report-format'][$key]);
                         $report->setFrequency($project_settings['schedule-freq'][$key]);
@@ -166,6 +174,10 @@ class ReportScheduler extends AbstractExternalModule
                         $fromUser = $project_settings['message-from-user'][$key];
                         $fromUser123 = $project_settings['message-from-user-123'][$key];
                         $from = $this->getUserEmail($fromUser, $fromUser123);
+                        
+                        $attach = $project_settings['message-attach-report'][$key];
+                        $attach = ($attach=='') ? '1' : $attach; // scheduled reports created before this setting added default to "attach export file"
+                        $report->setAttachExport($attach);
                         
                         $report->setMessage(new \Message());
                         $report->getMessage()->setTo(implode(';',$project_settings['recipient-email'][$key]));

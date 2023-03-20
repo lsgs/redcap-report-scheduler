@@ -12,7 +12,9 @@ namespace MCRI\ReportScheduler;
  */
 class ScheduledReport {
         protected $srid;
+        protected $pid;
         protected $report_id;
+        protected $report_title;
         protected $permission_level;
         protected $report_format;
         protected $frequency;
@@ -21,18 +23,23 @@ class ScheduledReport {
         protected $active_to;
         protected $last_sent;
         protected $suppress_empty;
+        protected $attach_export;
         protected $message;
         
         public function getSRId() { return $this->srid; }
-        public function setSRId($val) { $this->srid = $val; }
+        public function setSRid($val) { $this->srid = $val; }
+        public function getPid() { return $this->pid; }
+        public function setPid($val) { $this->pid = $val; }
         public function getReportId() { return $this->report_id; }
-        public function setReportId($val) { $this->report_id = $val; }
+        public function setReportId($val) { $this->report_id = intval($val); }
+        public function getReportTitle() { return $this->report_title; }
+        public function setReportTitle($val) { $this->report_title = $val; }
         public function getPermissionLevel() { return $this->permission_level; }
         public function setPermissionLevel($val) { $this->permission_level = $val; }
         public function getReportFormat() { return $this->report_format; }
         public function setReportFormat($val) { $this->report_format = $val; }
         public function getFrequency() { return $this->frequency; }
-        public function setFrequency($val) { $this->frequency = $val; }
+        public function setFrequency($val) { $this->frequency = trim($val); }
         public function getFrequencyUnit() { return $this->frequency_unit; }
         public function setFrequencyUnit($val) { $this->frequency_unit = $val; }
         public function getActiveFrom() { return $this->active_from; }
@@ -43,6 +50,8 @@ class ScheduledReport {
         public function setLastSent($val) { $this->last_sent = $this->setDateTimeFromVal($val); }
         public function getSuppressEmpty() { return $this->suppress_empty; }
         public function setSuppressEmpty($val) { $this->suppress_empty = $val; }
+        public function getAttachExport() { return $this->attach_export; }
+        public function setAttachExport($val) { $this->attach_export = intval($val); }
         public function getMessage() { return $this->message; }
         public function setMessage($val) { 
             if (!($val instanceof \Message)) {
@@ -88,5 +97,30 @@ class ScheduledReport {
                 }
                 
                 return $now >= $from && $now <= $to && $now >= $next;
+        }
+
+        /**
+         * messagePiping($fileId)
+         * Pipe values for custom "smart variables" into message body
+         * [report-link]: Hyperlink to View Report page
+         * [report-link]: View Report page URL
+         * [download-link]: Hyperlink to download report from File Repository
+         * [download-url]: File Repository report download URL
+         * param int $fileId doc id of exported file
+         */
+        public function messagePiping($fileId, $fileName) {
+            $smartVars = array();
+            $smartVars['report-url'] = APP_PATH_WEBROOT_FULL."redcap_v".REDCAP_VERSION."/DataExport/index.php?pid={$this->pid}&report_id={$this->report_id}";
+            $smartVars['download-url'] = (\REDCap::versionCompare(REDCAP_VERSION, '13.0.0', '>='))
+                ? APP_PATH_WEBROOT_FULL."redcap_v".REDCAP_VERSION."/index.php?pid={$this->pid}&route=FileRepositoryController:download&id=$fileId"
+                : APP_PATH_WEBROOT_FULL."redcap_v".REDCAP_VERSION."/FileRepository/file_download.php?pid={$this->pid}&id=$fileId";
+
+            $smartVars['report-link'] = "<a href='{$smartVars['report-url']}'>{$this->report_title}</a>";
+            $smartVars['download-link'] = "<a href='{$smartVars['download-url']}'>$fileName</a>";
+            
+            foreach ($smartVars as $var => $repl) {
+                $body = str_replace("[$var]", $repl, $this->message->getBody());
+                $this->message->setBody($body);
+            }
         }
 }

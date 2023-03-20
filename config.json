@@ -9,10 +9,7 @@
             "institution": "Murdoch Children's Research Institute"
         }
     ],
-    "framework-version": 8,
-    "compatibility": {
-        "redcap-version-min": "11.1.1"
-    },
+    "framework-version": 9,
     "permissions": [
         "redcap_module_save_configuration"
     ],
@@ -187,9 +184,19 @@
                 },
                 {
                     "key": "message-body",
-                    "name": "Message body",
+                    "name": "Message body<p>Note the following custom \"smart variables\" can be utilised in the message body:<ul><li><span style='font-family:monospace;'>[report-link]</span>: Hyperlink to View Report page</li><li><span style='font-family:monospace;'>[report-url]</span>: View Report page URL</li><li><span style='font-family:monospace;'>[download-link]</span>: Hyperlink to download report from File Repository</li><li><span style='font-family:monospace;'>[download-url]</span>: File Repository report download URL</li></ul></p>",
                     "required": true,
                     "type": "rich-text"
+                },
+                {
+                    "key": "message-attach-report",
+                    "name": "Attach report output to message (not recommended)?<p>Consider carefully whether it is appropriate to send report data by email. Including a link to the report page (e.g. [report-link]) or download (e.g. [download-link]) may be most appropriate due to requiring login.</p>",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        { "value": "0", "name": "No (Recommended)" },
+                        { "value": "1", "name": "Yes, attach exported file" }
+                    ]
                 },
                 {
                     "key": "schedule-last",
