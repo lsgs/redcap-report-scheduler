@@ -192,8 +192,19 @@ class ReportScheduler extends AbstractExternalModule
 
         protected function getUserEmail($fromUser, $fromUser123) {
                 $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
-                $sql = "select ? from redcap_user_information where username = ? limit 1";
-                $q = $this->query($sql, [$fieldname,$fromUser]);
+		if($fromUser123==1)
+                {
+                        $sql = "select user_email from redcap_user_information where username=? limit 1";
+                } elseif ($fromUser123==2)
+                {
+                        $sql = "select user_email2 from redcap_user_information where username=? limit 1";
+
+                }elseif ($fromUser123==3)
+                {
+                        $sql = "select user_email3 from redcap_user_information where username=? limit 1";
+
+                }
+                $q = $this->query($sql, [$fromUser]);
                 $r = db_fetch_assoc($q);
                 return htmlspecialchars($r[$fieldname], ENT_QUOTES);
         }
