@@ -9,10 +9,8 @@
             "institution": "Murdoch Children's Research Institute"
         }
     ],
-    "framework-version": 9,
-    "permissions": [
-        "redcap_module_save_configuration"
-    ],
+    "framework-version": 12,
+    "enable-no-auth-logging": true,
     "enable-every-page-hooks-on-system-pages": false,
     "crons": [
         {

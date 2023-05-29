@@ -24,6 +24,7 @@ class ReportScheduler extends AbstractExternalModule
         }
         
         public function cronEntry() {
+                if (!$this->canSendEmail()) return;
                 global $Proj, $user_rights;
                 $user_rights['reports'] = 1;
                 $projects = $this->getProjectsWithModuleEnabled();
@@ -125,9 +126,7 @@ class ReportScheduler extends AbstractExternalModule
                                                         $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} sent";
                                                         $result['sent']++;
                                                 } else {
-                                                        $thisForLog = clone $this;
-                                                        $thisForLog->project = $this->project->project_id;
-                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($thisForLog, true)."<br>".print_r($rpt, true);
+                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($rpt, true);
                                                         $result['failed']++;
                                                 }
 
@@ -192,8 +191,8 @@ class ReportScheduler extends AbstractExternalModule
 
         protected function getUserEmail($fromUser, $fromUser123) {
                 $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
-                $sql = "select ? from redcap_user_information where username = ? limit 1";
-                $q = $this->query($sql, [$fieldname,$fromUser]);
+                $sql = "select ".$this->escape($fieldname)." from redcap_user_information where username = ? limit 1";
+                $q = $this->query($sql, [$fromUser]);
                 $r = db_fetch_assoc($q);
                 return htmlspecialchars($r[$fieldname], ENT_QUOTES);
         }
@@ -310,4 +309,16 @@ class ReportScheduler extends AbstractExternalModule
                 if ($update) { $this->setProjectSettings($project_settings, $project_id); }
                 return;
         }
+
+        public function canSendEmail() {
+                // Check if emails can be sent 
+                $email = new \Message();
+                $email->setTo('redcapemailtest@gmail.com');
+                $email->setFrom($GLOBALS['project_contact_email']);
+                $email->setFromName('redcapemailtest');
+                $email->setSubject('redcapemailtest');
+                $email->setBody('external module report scheduler email test',true);
+                return (bool)($email->send());
+        }
+
 }
