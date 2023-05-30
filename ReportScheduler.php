@@ -49,7 +49,7 @@ class ReportScheduler extends AbstractExternalModule
                                         //echo $result;
                                         //**************************************
                                         
-                                        $msg = 'Scheduled Report processing complete for project id='.$this->project->project_id.PHP_EOL.$projectUrl.PHP_EOL.print_r($result,true);
+                                        $msg = 'Scheduled Report processing complete for project id='.intval($this->project->project_id).PHP_EOL.$projectUrl.PHP_EOL.print_r($result,true);
                                         $this->logmsg($msg, false);
                                 } catch (\Exception $e) {
                                         \REDCap::logEvent($this->PREFIX . " exception: " . $e->getMessage(), '', '', null, null, $project_id);
@@ -72,13 +72,13 @@ class ReportScheduler extends AbstractExternalModule
 
                         if ($rpt->isDue()) { 
                             
-                                $msg = 'Project id='.$this->project->project_id.': Scheduled Report index '.$rpt->getSettingsPageIndex().' is due';
+                                $msg = 'Project id='.intval($this->project->project_id).': Scheduled Report index '.intval($rpt->getSettingsPageIndex()).' is due';
                                 $this->logmsg($msg);
                                 
                                 list($data_doc_id, $syntax_doc_id) = $this->exportReport($rpt);
 
                                 if (is_null($data_doc_id)) {
-                                        $msg = 'Failed to export report id '.$rpt->getReportId();
+                                        $msg = 'Failed to export report id '.intval($rpt->getReportId());
                                         $result['failed']++;
                                         $this->logmsg($msg);
                                         continue;
@@ -123,10 +123,10 @@ class ReportScheduler extends AbstractExternalModule
 
                                                 if ($rpt->getMessage()->send()) {
                                                         $this->setProjectSetting('schedule-last', $lastSetTimes);
-                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} sent";
+                                                        $msg = "Scheduled Report index ".intval($rpt->getSettingsPageIndex())." sent";
                                                         $result['sent']++;
                                                 } else {
-                                                        $msg = "Scheduled Report index {$rpt->getSettingsPageIndex()} send failed <br>".print_r($rpt, true);
+                                                        $msg = "Scheduled Report index ".intval($rpt->getSettingsPageIndex())." send failed <br>".print_r($this->escape($rpt), true);
                                                         $result['failed']++;
                                                 }
 
@@ -136,7 +136,7 @@ class ReportScheduler extends AbstractExternalModule
 
                         } else {
 
-                                $msg = 'Project id='.$this->project->project_id.': Scheduled Report index '.$rpt->getSettingsPageIndex().' is NOT due';
+                                $msg = 'Project id='.intval($this->project->project_id).': Scheduled Report index '.intval($rpt->getSettingsPageIndex()).' is NOT due';
                                 $result['not_due']++;
                                 $this->logmsg($msg);
                         }
