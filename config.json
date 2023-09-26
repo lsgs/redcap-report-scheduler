@@ -9,7 +9,7 @@
             "institution": "Murdoch Children's Research Institute"
         }
     ],
-    "framework-version": 12,
+    "framework-version": 14,
     "enable-no-auth-logging": true,
     "enable-every-page-hooks-on-system-pages": false,
     "crons": [
@@ -36,6 +36,13 @@
         ]
     },
     "system-settings": [ 
+         {
+            "name": "<div class='red text-center'>It appears the server is unable to send emails. This module cannot function without the ability to send email.</div>",
+            "key": "email-error-system",
+            "type": "descriptive",
+            "hidden": false
+    
+        }
     ],
     "project-settings": [
         {
@@ -208,6 +215,14 @@
             "name": "Enable additional logging to project event log",
             "key": "logging",
             "type": "checkbox"
+        },
+          {
+            "name": "<div class='red text-center'>It appears the server is unable to send emails. This module cannot function without the ability to send email.</div>",
+            "key": "email-error-project",
+            "type": "descriptive",
+            "hidden": false
+    
         }
+        
     ]
 }
