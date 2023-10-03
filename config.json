@@ -46,6 +46,18 @@
     ],
     "project-settings": [
         {
+            "name": "<div class='red text-center'>It appears the server is unable to send emails. This module cannot function without the ability to send email.</div>",
+            "key": "email-error-project",
+            "type": "descriptive",
+            "hidden": false
+    
+        },
+        {
+            "name": "Enable additional logging to project event log",
+            "key": "logging",
+            "type": "checkbox"
+        },
+        {
             "name": "<span class='badge badge-lg badge-primary' style='font-size:1.25rem;'>Scheduled Report</span>",
             "key": "scheduled-report",
             "type": "sub_settings",
@@ -210,19 +222,6 @@
                     "type": "text"
                 }
             ]
-        },
-        {
-            "name": "Enable additional logging to project event log",
-            "key": "logging",
-            "type": "checkbox"
-        },
-          {
-            "name": "<div class='red text-center'>It appears the server is unable to send emails. This module cannot function without the ability to send email.</div>",
-            "key": "email-error-project",
-            "type": "descriptive",
-            "hidden": false
-    
         }
-        
     ]
 }

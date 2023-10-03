@@ -123,7 +123,7 @@ class ReportScheduler extends AbstractExternalModule
                                                 }
 
                                         }
-                                        $this->logmsg($msg, true);
+                                        $this->logmsg($msg, false);
                                 }
 
                         } else {
@@ -308,12 +308,16 @@ class ReportScheduler extends AbstractExternalModule
          * Allows dynamically modify and return the settings that will be displayed.
          * @param string $project_id, $project_settings
          */
-       public function redcap_module_configuration_settings($project_id, $project_settings) {
-               foreach ($project_settings as $si => $sarray) {
-                   if ($sarray['key']=='email-error-project' && $sarray['key']=='email-error-system')  break;}
-                        $project_settings[$si]['hidden'] = $this->canSendEmail();
-                        return $project_settings;
-                    }
+        public function redcap_module_configuration_settings($project_id, $project_settings) {
+                foreach ($project_settings as $si => $sarray) {
+                        if ((intval($project_id)>0 && $sarray['key']=='email-error-project') ||
+                            (is_null($project_id)  && $sarray['key']=='email-error-system')) {
+                                break;
+                        }
+                }
+                $project_settings[$si]['hidden'] = $this->canSendEmail();
+                return $project_settings;
+        }
 
         public function canSendEmail() {
                 // Check if emails can be sent 
@@ -325,5 +329,4 @@ class ReportScheduler extends AbstractExternalModule
                 $email->setBody('external module report scheduler email test',true);
                 return (bool)($email->send());
         }
-
 }
