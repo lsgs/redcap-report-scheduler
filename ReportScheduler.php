@@ -15,16 +15,8 @@ class ReportScheduler extends AbstractExternalModule
         protected $project;
         protected $project_reports;
         protected $logging=false;
-        
-        public function __construct() {
-                parent::__construct();
-                if (defined('PROJECT_ID')) {
-                       $this->logging = (bool)$this->getProjectSetting('logging');
-                }
-        }
-        
+            
         public function cronEntry() {
-                if (!$this->canSendEmail()) return;
                 global $Proj, $user_rights;
                 $user_rights['reports'] = 1;
                 $projects = $this->getProjectsWithModuleEnabled();
@@ -309,6 +301,19 @@ class ReportScheduler extends AbstractExternalModule
                 if ($update) { $this->setProjectSettings($project_settings, $project_id); }
                 return;
         }
+	
+        /**
+         * redcap_module_configuration_settings
+         * Triggered when the system or project configuration dialog is displayed for a given module.
+         * Allows dynamically modify and return the settings that will be displayed.
+         * @param string $project_id, $project_settings
+         */
+       public function redcap_module_configuration_settings($project_id, $project_settings) {
+               foreach ($project_settings as $si => $sarray) {
+                   if ($sarray['key']=='email-error-project' && $sarray['key']=='email-error-system')  break;}
+                        $project_settings[$si]['hidden'] = $this->canSendEmail();
+                        return $project_settings;
+                    }
 
         public function canSendEmail() {
                 // Check if emails can be sent 
