@@ -261,7 +261,7 @@ class ReportScheduler extends AbstractExternalModule
                         $this->logging = (bool)$this->getProjectSetting('logging', $Proj->project_id);
                 }
                 if ($this->logging || $always) {
-                        $this->log($msg);
+                        $this->log($this->escape($msg));
                 }
         }
         
@@ -321,8 +321,9 @@ class ReportScheduler extends AbstractExternalModule
 
         public function canSendEmail() {
                 // Check if emails can be sent 
+                global $test_email_address;
                 $email = new \Message();
-                $email->setTo('redcapemailtest@gmail.com');
+                $email->setTo($test_email_address);//'redcapemailtest@gmail.com');
                 $email->setFrom($GLOBALS['project_contact_email']);
                 $email->setFromName('redcapemailtest');
                 $email->setSubject('redcapemailtest');
