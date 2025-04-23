@@ -17,14 +17,14 @@ With the default "Design" permission option a user with "Design" but not "User R
 ## Configuration
 
 Scheduled reports are configured on the external module configuration page. You may set up multiple scheduled reports per project.
-- Report ID of report you want exported and attached to the email.
+- Report ID of report you want exported and linked to or attached to the email.
 - Export format (CSV raw or labels - stats packages may be added in a future version).
 - Export permissions (De-identified/Remove identifier fields/Full data set)
 - Frequency (every X hours/days/months/years)
 - Date/time range (i.e. the start time and optionally an end time)
 - Suppress the sending of the message if the report output is empty
 - Message details:
-  - From email address
+  - From email address (of project user)
   - To email addresses (repeating field)
   - Subject line
   - Message body (rich text) - including link piping options (see below)
@@ -41,6 +41,6 @@ Scheduled reports are configured on the external module configuration page. You 
   - [report-url]: View Report page URL
   - [download-link]: Hyperlink to download report from File Repository
   - [download-url]: File Repository report download URL
-- Actually **attaching the export file to the email is not recommended**. It is generally not good practice to send data by email. Utilise the smart variables to send links to the report/output instead.
+- **Including the export file in the email as an attachment is not recommended**. It is generally not good practice to send data by email. Utilise the smart variables to send links to the report/output instead.
 
 ********************************************************************************

@@ -50,7 +50,7 @@ class ReportScheduler extends AbstractExternalModule
                 }
         }
         
-        public function run() {
+        public function run($forceRunSchedReportNum = null) {
                 global $Proj;
                 if (!defined('USERID')) define('USERID', $this->PREFIX); // used in \DataExport, required to prevent exceptions for PHP 8
                 $result = array('not_due'=>0,'sent'=>0,'failed'=>0,'empty_suppressed'=>0);
@@ -58,11 +58,12 @@ class ReportScheduler extends AbstractExternalModule
                         $Proj = new \Project($_GET['pid']);
                 }
                 $this->project = $Proj;
-                $this->setProjectReports();
+                $includeDisabled = (!is_null($forceRunSchedReportNum));
+                $this->setProjectReports( $includeDisabled, $forceRunSchedReportNum );
                 
                 foreach ($this->project_reports as $rpt) {
 
-                        if ($rpt->isDue()) { 
+                        if ($rpt->isDue() || !is_null($forceRunSchedReportNum)) { 
                             
                                 $msg = 'Project id='.intval($this->project->project_id).': Scheduled Report index '.intval($rpt->getSettingsPageIndex()).' is due';
                                 $this->logmsg($msg);
@@ -100,7 +101,10 @@ class ReportScheduler extends AbstractExternalModule
                                         file_put_contents($tempDirStoredName, $fileContent);
 
                                         $lastSetTimes = $this->getProjectSetting('schedule-last');
-                                        $lastSetTimes[$rpt->getSRId()] = date('Y-m-d H:i:s');
+                                        if (is_null($forceRunSchedReportNum)) {
+                                                // if running on schedule (not manually triggered) then update schedule-last
+                                                $lastSetTimes[$rpt->getSRId()] = date('Y-m-d H:i:s');
+                                        }
 
                                         if (strlen($fileContent[0])<2 && $rpt->getSuppressEmpty()) { // $fileContent[0] = '"' when empty
                                                 $this->setProjectSetting('schedule-last', $lastSetTimes);
@@ -136,8 +140,10 @@ class ReportScheduler extends AbstractExternalModule
                 return $result;
         }
         
-        protected function setProjectReports() {
+        protected function setProjectReports($includeDisabled=false, $schedReportNumber=null) {
+                global $Proj;
                 $this->project_reports = array();
+                $this->project = $Proj;
                 $project_settings = $this->getProjectSettings($this->project->project_id);
                 
                 //$msg = 'Cron extmod_report_scheduler: project='.$this->project->project_id.' settings='.print_r($project_settings, true);
@@ -145,12 +151,13 @@ class ReportScheduler extends AbstractExternalModule
 
                 foreach ($project_settings['scheduled-report'] as $key => $value) {
                         if (!$value) { continue; }
-
-                        if (!$project_settings['schedule-enabled'][$key]) { continue; }
+                        if (!is_null($schedReportNumber) && $key!=$schedReportNumber) continue;
+                        if (!$includeDisabled && !$project_settings['schedule-enabled'][$key]) { continue; }
                         $report = new ScheduledReport();
 
                         $report->setSRId($key);
                         $report->setPid($this->project->project_id);
+                        $report->setEnabled($project_settings['schedule-enabled'][$key]);
                         $report->setReportId($project_settings['report-id'][$key]);
                         $report->setReportTitle($project_settings['report-title'][$key]);
                         $report->setPermissionLevel($project_settings['report-rights'][$key]);
@@ -180,6 +187,13 @@ class ReportScheduler extends AbstractExternalModule
                 }
                 return;
         }
+        
+        public function getProjectReports($includeDisabled=false) {
+            if (empty($this->project_reports)) {
+                $this->setProjectReports($includeDisabled);
+            }
+            return $this->project_reports;
+        }
 
         protected function getUserEmail($fromUser, $fromUser123) {
                 $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
@@ -188,7 +202,23 @@ class ReportScheduler extends AbstractExternalModule
                 $r = db_fetch_assoc($q);
                 return htmlspecialchars($r[$fieldname], ENT_QUOTES);
         }
-        
+
+        protected function getUserEmailAddresses() {
+            $userEmails = array();
+            $sql = "select ur.username, user_email, user_email2, user_email3 from redcap_user_rights ur inner join redcap_user_information ui on ur.username=ui.username where project_id=? order by ur.username";
+            $q = $this->query($sql, [$this->project->project_id]);
+            while ($row = db_fetch_assoc($q)) {
+                $un = $row['username'];
+                $e1 = $this->escape($row['user_email']);
+                $e2 = $this->escape($row['user_email2']);
+                $e3 = $this->escape($row['user_email3']);
+                $userEmails[$row['username'].'-1'] = $e1;
+                if (!empty($e2)) $userEmails[$row['username'].'-2'] = $e2;
+                if (!empty($e3)) $userEmails[$row['username'].'-3'] = $e3;
+            }
+            return $userEmails;
+    }
+
         protected function getReportTitle($project_id, $report_id) {
                 $sql = "select title from redcap_reports where project_id=? and report_id=? limit 1";
                 $q = $this->query($sql, [$project_id,$report_id]);
@@ -267,8 +297,8 @@ class ReportScheduler extends AbstractExternalModule
         
         /**
          * redcap_module_save_configuration
-         * Look up report ids and populate report-title settings
-         * Look up user/profile and populate message-from-address settings
+         * Look up report ids and update report-title settings
+         * Look up user/profile and populate message-from settings
          * @param string $project_id
          */
         public function redcap_module_save_configuration($project_id) {
@@ -288,8 +318,24 @@ class ReportScheduler extends AbstractExternalModule
                                 $update = true;
                         }
                         
+                        $from = $project_settings['message-from'][$key];
                         $fromUser = $project_settings['message-from-user'][$key];
                         $fromUser123 = $project_settings['message-from-user-123'][$key];
+                        if (empty($from)) {  // migrate from pre v1.4.0 config version 
+                            $from = $project_settings['message-from'][$key] = $fromUser.'-'.$fromUser123;
+                            $update = true;
+                        } else {
+                            list($fromUser, $fromUser123) = explode('-', $from, 2);
+
+                            if ($fromUser !== $project_settings['message-from-user'][$key]) {
+                                $project_settings['message-from-user'][$key] = $fromUser;
+                                $update = true;
+                            }
+                            if ($fromUser123 !== $project_settings['message-from-user-123'][$key]) {
+                                $project_settings['message-from-user-123'][$key] = $fromUser123;
+                                $update = true;
+                            }
+                        }
                         $useremail = $this->getUserEmail($fromUser, $fromUser123);
 
                         if ($useremail !== $project_settings['message-from-address'][$key]) {
@@ -306,20 +352,89 @@ class ReportScheduler extends AbstractExternalModule
          * redcap_module_configuration_settings
          * Triggered when the system or project configuration dialog is displayed for a given module.
          * Allows dynamically modify and return the settings that will be displayed.
-         * @param string $project_id, $project_settings
+         * Look up report ids and update report-title settings
+         * Look up user/profile and populate message-from settings
+         * @param mixed $project_id, $configSettings
          */
-        public function redcap_module_configuration_settings($project_id, $project_settings) {
-                foreach ($project_settings as $si => $sarray) {
-                        if ((intval($project_id)>0 && $sarray['key']=='email-error-project') ||
-                            (is_null($project_id)  && $sarray['key']=='email-error-system')) {
-                                break;
+        public function redcap_module_configuration_settings($project_id, $configSettings) {
+            foreach ($configSettings as $si => $sarray) {
+                if ($sarray['key']=='summary-page') {
+                    $url = $this->getUrl('summary.php',false,false);
+                    $configSettings[$si]['name'] = str_replace('href="#"', 'href="'.$url.'"', $configSettings[$si]['name']);
+
+                } else if ($sarray['key']=='scheduled-report') {
+                    $srConfigIndex = $si;
+                    $subSettings = $sarray['sub_settings'];
+                    foreach ($subSettings as $ssi => $ss) {
+                        if ($ss['key']=='report-id') {
+
+                            // include report id in label with report title
+                            foreach ($ss['choices'] as $choiceIdx => $choice) {
+                                $subSettings[$ssi]['choices'][$choiceIdx]['name'] = $choice['value'].': '.$choice['name'];
+                            }
+
+                            
+                        } else if ($ss['key']=='message-from') {
+
+                            // make dropdown for user/email selection
+                            $sql = "select username, email123, user_email
+                                    from (
+                                    select ur.username, 1 as email123, user_email from redcap_user_rights ur inner join redcap_user_information ui on ur.username=ui.username where project_id=?
+                                    union all 
+                                    select ur.username, 2 as email123, user_email2 as user_email from redcap_user_rights ur inner join redcap_user_information ui on ur.username=ui.username where project_id=?
+                                    union all 
+                                    select ur.username, 3 as email123, user_email3 as user_email from redcap_user_rights ur inner join redcap_user_information ui on ur.username=ui.username where project_id=?
+                                    ) useremails
+                                    where coalesce(user_email,'')<>''
+                                    order by username, email123";
+                            $q = $this->query($sql, [$project_id, $project_id, $project_id]);
+                            $userEmailChoices = array();
+                            while ($row = $q->fetch_assoc()) {
+                                $userEmailChoices[] = array(
+                                    'value' => $row['username'].'-'.$row['email123'],
+                                    'name' => $row['username'].' '.$row['email123'].': '.$row['user_email']
+                                );
+                            }
+                            $subSettings[$ssi]['type'] = 'dropdown';
+                            $subSettings[$ssi]['choices'] = $userEmailChoices;
                         }
+
+                        $configSettings[$si]['sub_settings'] = $subSettings;
+                    }
+
+                } else if ( (intval($project_id)>0 && $sarray['key']=='email-error-project') ||
+                            (is_null($project_id)  && $sarray['key']=='email-error-system') ) {
+                        $configSettings[$si]['hidden'] = $this->canSendEmail($project_id);
                 }
-                $project_settings[$si]['hidden'] = $this->canSendEmail();
-                return $project_settings;
+            }
+
+            // v1.4 update new 'message-from' settings from 'message-from-user' and 'message-from-user-123' where needed
+            $project_settings = $this->getProjectSettings($project_id);
+                
+            $update = false;
+            foreach ($project_settings['scheduled-report'] as $key => $value) {
+                    if (!$value) { continue; }
+                    $from = $project_settings['message-from'][$key];
+                    $fromUser = $project_settings['message-from-user'][$key];
+                    $fromUser123 = $project_settings['message-from-user-123'][$key];
+                    if (empty($from)) {  // migrate from pre v1.4.0 config version 
+                        $project_settings['message-from'][$key] = $fromUser.'-'.$fromUser123;
+                        $update = true;
+                    }
+            }
+            if ($update) {
+                $this->setProjectSettings($project_settings, $project_id); 
+                $configSettings[$srConfigIndex] = array(
+                    'name' => "<div class='green text-center' style='position:relative;left:-8px;width:733px;'><i class='fas fa-info-circle mr-2'></i>Some background settings relating to report senders have been successfully updated.<br>Reopen this dialog to view settings.</div>",
+                    'key' => "update-message",
+                    'type' => "descriptive"
+                );
+            }
+
+            return $configSettings;
         }
 
-        public function canSendEmail() {
+        public function canSendEmail($project_id=null) {
                 // Check if emails can be sent 
                 global $test_email_address;
                 $email = new \Message();
@@ -327,7 +442,26 @@ class ReportScheduler extends AbstractExternalModule
                 $email->setFrom($GLOBALS['project_contact_email']);
                 $email->setFromName('redcapemailtest');
                 $email->setSubject('redcapemailtest');
-                $email->setBody('external module report scheduler email test',true);
+                $email->setBody('external module report scheduler email test '.($project_id ?? ''),true);
                 return (bool)($email->send());
         }
+
+        public function redcap_module_ajax($action, $payload, $project_id, $record, $instrument, $event_id, $repeat_instance, $survey_hash, $response_id, $survey_queue_hash, $page, $page_full, $user_id, $group_id) 
+        {
+            if ($action!=='run-report') return;
+            $report = null;
+            $schedules = $this->getProjectReports(true); // include disabled
+            foreach ($schedules as $rpt) {
+                if ($rpt->getSRID() == $payload) {
+                    $report = $rpt;
+                    break;
+                }
+            }
+            if (is_null($report)) {
+                $result = 'no report';
+            } else {
+                $result = $this->run($report->getSRID());
+            }
+            return $result;
+        }    
 }

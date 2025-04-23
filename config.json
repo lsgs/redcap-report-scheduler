@@ -1,6 +1,6 @@
 {
     "name": "Report Scheduler",
-    "description": "Set up a schedule on which to run a report and email it (or a link to it) to a list of recipients. <br><b>It is strongly recommended that this module is configured to require a module-specific user privilege.",
+    "description": "Set up a schedule on which to run a report and email it (or a link to it) to a list of recipients. <br><span class=\"font-weight-bold text-danger\">It is strongly recommended that this module is configured to require a module-specific user privilege.</span>",
     "namespace": "MCRI\\ReportScheduler",
     "authors": [
         {
@@ -9,7 +9,7 @@
             "institution": "Murdoch Children's Research Institute"
         }
     ],
-    "framework-version": 14,
+    "framework-version": 15,
     "enable-no-auth-logging": true,
     "enable-every-page-hooks-on-system-pages": false,
     "crons": [
@@ -25,6 +25,7 @@
         "run_project_reports",
         "testnoauth"
     ],
+    "auth-ajax-actions": [ "run-report" ],
     "links": {
         "control-center": [
             {
@@ -58,6 +59,16 @@
             "type": "checkbox"
         },
         {
+            "key": "summary-page",
+            "name": "<div style=\"display:inline-block;width:392px;\">View summary of scheduled report configurations:</div><div style=\"display:inline-block;width:200px;\"><a class=\"btn btn-sm btn-primaryrc\" style=\"color:#fff;\" target=\"_blank\" href=\"#\">Open<i class=\"fas fa-external-link-alt ml-1\"></i></a></div>",
+            "type": "descriptive"
+        },
+        {
+            "key": "section-header",
+            "name": "<div class=\"blue text-center\" style=\"position:relative;left:-8px;width:733px\">Scheduled Reports</div>",
+            "type": "descriptive"
+        },
+        {
             "name": "<span class='badge badge-lg badge-primary' style='font-size:1.25rem;'>Scheduled Report</span>",
             "key": "scheduled-report",
             "type": "sub_settings",
@@ -75,15 +86,16 @@
                 },
                 {
                     "key": "report-id",
-                    "name": "Report ID",
+                    "name": "Report",
                     "required": true,
-                    "type": "text"
+                    "type": "report-list"
                 },
                 {
                     "name": "<span class='text-muted'>Report title<br><b>NB. For information only.</b><br>Value is set automatically on save. Anything you enter here will just get overwritten by the title of the report with the ID you enter above</span>",
                     "key": "report-title",
                     "required": false,
-                    "type": "text"
+                    "type": "text",
+                    "hidden": true
                 },
                 {
                     "key": "report-rights",
@@ -115,7 +127,8 @@
                     "key": "schedule-freq",
                     "name": "Send frequency (send every ...)",
                     "required": true,
-                    "type": "text"
+                    "type": "text",
+                    "validation": "integer"
                 },
                 {
                     "key": "schedule-freq-unit",
@@ -133,13 +146,15 @@
                     "key": "schedule-start",
                     "name": "Starting from date/time (YYYY-MM-DD HH:MM:SS)",
                     "required": true,
-                    "type": "text"
+                    "type": "text",
+                    "validation": "datetime"
                 },
                 {
                     "key": "schedule-end",
                     "name": "Until date/time (YYYY-MM-DD HH:MM:SS)<br>(Optional)",
                     "required": false,
-                    "type": "text"
+                    "type": "text",
+                    "validation": "datetime"
                 },
                 {
                     "name": "<span class='badge badge-lg badge-info' style='font-size:1rem;'>Message</span>",
@@ -152,15 +167,23 @@
                     "type": "checkbox"
                 },
                 {
+                    "key": "message-from",
+                    "name": "Message sender (user/email)",
+                    "type": "text",
+                    "required": true
+                },
+                {
                     "key": "message-from-user",
                     "name": "Message sender (user)",
                     "type": "user-list",
-                    "required": true
+                    "required": false,
+                    "hidden": true
                 },
                 {
                     "key": "message-from-user-123",
                     "name": "Use user's primary, secondary or tertiary email?<br>Note: emails will not be sent if the selected email address is not present in the user's profile.",
-                    "required": true,
+                    "required": false,
+                    "hidden": true,
                     "type": "dropdown",
                     "choices": [
                         { "value": "1", "name": "Primary" },
@@ -172,7 +195,8 @@
                     "name": "<span class='text-muted'>Message from address<br><b>NB. For information only.</b><br>Value is set automatically on save. Anything you enter here will just get overwritten by the nominated email address of the user you select above</span>",
                     "key": "message-from-address",
                     "required": false,
-                    "type": "text"
+                    "hidden": true,
+                    "type": "email"
                 },
                 {
                     "key": "message-recipients",
@@ -207,19 +231,20 @@
                 },
                 {
                     "key": "message-attach-report",
-                    "name": "Attach report output to message (not recommended)?<p>Consider carefully whether it is appropriate to send report data by email. Including a link to the report page (e.g. [report-link]) or download (e.g. [download-link]) may be most appropriate due to requiring login.</p>",
+                    "name": "Distribution option<p>It is generally inappropriate to attach data files to emails. Including a link to the report page (e.g. [report-link]) or download (e.g. [download-link]) is preferred due to requiring login for the data to be accessed.</p>",
                     "required": true,
                     "type": "dropdown",
                     "choices": [
-                        { "value": "0", "name": "No (Recommended)" },
-                        { "value": "1", "name": "Yes, attach exported file" }
+                        { "value": "0", "name": "Include links (Recommended)" },
+                        { "value": "1", "name": "Attach exported file (Not recommended)" }
                     ]
                 },
                 {
                     "key": "schedule-last",
                     "name": "Last run date/time (YYYY-MM-DD HH:MM:SS)<br>(Updated automatically)",
                     "required": false,
-                    "type": "text"
+                    "type": "text",
+                    "validation": "datetime"
                 }
             ]
         }

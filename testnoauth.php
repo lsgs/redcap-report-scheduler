@@ -1,4 +1,5 @@
 <?php
+if (is_null($module) || !($module instanceof MCRI\ReportScheduler\ReportScheduler)) { exit(); }
 if ($module->canSendEmail()) {
     $module->cronEntry();
     echo "<h1>Test Run Complete</h1>";

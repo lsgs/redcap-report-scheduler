@@ -13,6 +13,7 @@ namespace MCRI\ReportScheduler;
 class ScheduledReport {
         protected $srid;
         protected $pid;
+        protected $enabled;
         protected $report_id;
         protected $report_title;
         protected $permission_level;
@@ -30,6 +31,8 @@ class ScheduledReport {
         public function setSRid($val) { $this->srid = $val; }
         public function getPid() { return $this->pid; }
         public function setPid($val) { $this->pid = $val; }
+        public function getEnabled() { return $this->enabled; }
+        public function setEnabled($val) { $this->enabled = $val; }
         public function getReportId() { return $this->report_id; }
         public function setReportId($val) { $this->report_id = intval($val); }
         public function getReportTitle() { return $this->report_title; }
@@ -78,7 +81,7 @@ class ScheduledReport {
         public function isDue() {
                 $now = new \DateTime();
                 
-                $from = $this->getActiveFrom();
+                $from = ($this->getActiveFrom() instanceof \DateTime) ? $this->getActiveFrom() : (new \DateTime())->setTimestamp(PHP_INT_MAX>>32); // 2038-01-19 04:14:07
                 $to = ($this->getActiveTo() instanceof \DateTime) ? $this->getActiveTo() : (new \DateTime())->setTimestamp(PHP_INT_MAX>>32); // 2038-01-19 04:14:07
                 $last = ($this->getLastSent() instanceof \DateTime) ? $this->getLastSent() : (new \DateTime())->setTimestamp(0); // 1970-01-01 00:00:00;
                 
@@ -122,5 +125,11 @@ class ScheduledReport {
                 $body = str_replace("[$var]", $repl, $this->message->getBody());
                 $this->message->setBody($body);
             }
+        }
+
+        public function formatUserDatetime($val): string {
+            if (empty($val)) return '';
+            if ($val instanceof \DateTime) $val = $val->format('Y-m-d H:i:s');
+            return \DateTimeRC::format_user_datetime($val,'Y-M-D_24',null,false,true);
         }
 }
