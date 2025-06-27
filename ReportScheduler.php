@@ -408,29 +408,30 @@ class ReportScheduler extends AbstractExternalModule
                 }
             }
 
-            // v1.4 update new 'message-from' settings from 'message-from-user' and 'message-from-user-123' where needed
-            $project_settings = $this->getProjectSettings($project_id);
-                
-            $update = false;
-            foreach ($project_settings['scheduled-report'] as $key => $value) {
-                    if (!$value) { continue; }
-                    $from = $project_settings['message-from'][$key];
-                    $fromUser = $project_settings['message-from-user'][$key];
-                    $fromUser123 = $project_settings['message-from-user-123'][$key];
-                    if (empty($from)) {  // migrate from pre v1.4.0 config version 
-                        $project_settings['message-from'][$key] = $fromUser.'-'.$fromUser123;
-                        $update = true;
-                    }
+            if (!empty($project_id)) {
+                // v1.4 update new 'message-from' settings from 'message-from-user' and 'message-from-user-123' where needed
+                $project_settings = $this->getProjectSettings($project_id);
+                    
+                $update = false;
+                foreach ($project_settings['scheduled-report'] as $key => $value) {
+                        if (!$value) { continue; }
+                        $from = $project_settings['message-from'][$key];
+                        $fromUser = $project_settings['message-from-user'][$key];
+                        $fromUser123 = $project_settings['message-from-user-123'][$key];
+                        if (empty($from)) {  // migrate from pre v1.4.0 config version 
+                            $project_settings['message-from'][$key] = $fromUser.'-'.$fromUser123;
+                            $update = true;
+                        }
+                }
+                if ($update) {
+                    $this->setProjectSettings($project_settings, $project_id); 
+                    $configSettings[$srConfigIndex] = array(
+                        'name' => "<div class='green text-center' style='position:relative;left:-8px;width:733px;'><i class='fas fa-info-circle mr-2'></i>Some background settings relating to report senders have been successfully updated.<br>Reopen this dialog to view settings.</div>",
+                        'key' => "update-message",
+                        'type' => "descriptive"
+                    );
+                }
             }
-            if ($update) {
-                $this->setProjectSettings($project_settings, $project_id); 
-                $configSettings[$srConfigIndex] = array(
-                    'name' => "<div class='green text-center' style='position:relative;left:-8px;width:733px;'><i class='fas fa-info-circle mr-2'></i>Some background settings relating to report senders have been successfully updated.<br>Reopen this dialog to view settings.</div>",
-                    'key' => "update-message",
-                    'type' => "descriptive"
-                );
-            }
-
             return $configSettings;
         }
 
