@@ -122,7 +122,7 @@ class ReportScheduler extends AbstractExternalModule
                                                         $msg = "Scheduled Report index ".intval($rpt->getSettingsPageIndex())." sent";
                                                         $result['sent']++;
                                                 } else {
-                                                        $msg = "Scheduled Report index ".intval($rpt->getSettingsPageIndex())." send failed <br>".print_r($this->escape($rpt), true);
+                                                        $msg = "Scheduled Report index ".intval($rpt->getSettingsPageIndex())." send failed <br>scheduled-report-id=".intval($rpt->getSRId())."<br>report-id=".intval($rpt->getReportId())."<br>title=".$this->escape($rpt->getReportTitle());
                                                         $result['failed']++;
                                                 }
 
@@ -196,8 +196,12 @@ class ReportScheduler extends AbstractExternalModule
         }
 
         protected function getUserEmail($fromUser, $fromUser123) {
-                $fieldname = ($fromUser123==1) ? 'user_email' : 'user_email'.$fromUser123;
-                $sql = "select ".$this->escape($fieldname)." from redcap_user_information where username = ? limit 1";
+                switch (intval($fromUser123)) {
+                    case 3: $fieldname = 'user_email3'; break;
+                    case 2: $fieldname = 'user_email2'; break;
+                    default: $fieldname = 'user_email'; break;
+                }
+                $sql = "select $fieldname from redcap_user_information where username = ? limit 1";
                 $q = $this->query($sql, [$fromUser]);
                 $r = db_fetch_assoc($q);
                 return htmlspecialchars($r[$fieldname], ENT_QUOTES);
@@ -352,8 +356,9 @@ class ReportScheduler extends AbstractExternalModule
          * redcap_module_configuration_settings
          * Triggered when the system or project configuration dialog is displayed for a given module.
          * Allows dynamically modify and return the settings that will be displayed.
-         * Look up report ids and update report-title settings
-         * Look up user/profile and populate message-from settings
+         * - Look up report ids and update report-title settings
+         * - Look up user/profile and populate message-from settings
+         * - Include a link to the instruction summary page
          * @param mixed $project_id, $configSettings
          */
         public function redcap_module_configuration_settings($project_id, $configSettings) {
@@ -464,5 +469,41 @@ class ReportScheduler extends AbstractExternalModule
                 $result = $this->run($report->getSRID());
             }
             return $result;
-        }    
+        }
+
+    /**
+     * redcap_every_page_top()
+     * EM Manager page in project: 
+     * - include a link to the summary page
+     * - auto-open config settings when entering from summary page button click
+     */
+    public function redcap_every_page_top($project_id) {
+        if (!defined('PAGE')) return;
+        if (empty($project_id) || PAGE!=='manager/project.php') return;
+
+        $url = $this->escape($this->getUrl('summary.php',false,false));
+        ?>
+        <script type="text/javascript">
+            /*REDCap REST summary page link*/
+            $(document).ready(function(){
+                let url = '<?=$url?>';
+                let loc = $('tr[data-module="report_scheduler"] div.external-modules-description');
+                $(loc).append('<div class="mt-1"><a href="'+url+'"><i class="fa-solid fa-list-ol" style="margin-right: 5px;"></i> View Summary of Scheduled Report Configurations</a>')
+            });
+        </script>
+        <?php
+        if (isset($_GET['report_scheduler_config'])) {
+            ?>
+            <script type="text/javascript">
+                /*REDCap REST auto-config*/
+                $(window).on('load', function() {
+                    history.pushState({}, null, location.href.split("&report_scheduler_config")[0]);
+                    setTimeout(function() {
+                        $('tr[data-module="report_scheduler"] button.external-modules-configure-button').trigger('click');
+                    }, 1000);
+                });
+            </script>
+            <?php
+        }
+    }
 }

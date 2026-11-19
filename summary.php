@@ -8,7 +8,7 @@
  */
 if (is_null($module) || !($module instanceof MCRI\ReportScheduler\ReportScheduler)) { exit(); }
 
-global $Proj;
+global $Proj, $user_rights;
 $schedules = $module->getProjectReports(true); // include disabled
 
 require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
@@ -88,6 +88,7 @@ $columns = array(
 
 echo '<div class="projhdr"><i class="fas fa-file-export mr-1"></i>Scheduled Reports Summary</div>';
 echo '<p>The table below shows the configuration settings for scheduled reports in this project. You can force a run from this page that will run the report even if it is not currently due.</p>';
+echo '<button id="module-btn-edit" class="btn btn-xs btn-dark"><i class="fa-solid fa-pencil"></i> '.\RCView::tt('econsent_43').'</button>'; //"Edit settings"
 echo '<div id="sr-summary-table-container">';
 echo '<table id="sr-summary-table"><thead><tr>';
 
@@ -142,10 +143,13 @@ $module->initializeJavascriptModuleObject();
             $(thisBtn).prop('disabled', false);
         });
     };
-
+    module.editModuleSettings = function() {
+        window.location.href = app_path_webroot + 'ExternalModules/manager/project.php?pid='+pid+'&report_scheduler_config=1';
+    };
     module.init = function() {
         $('button.sr-message-btn').on('click',module.showMessage);
         $('button.sr-trigger-btn').on('click',module.clickRun);
+        $('#module-btn-edit').on('click', module.editModuleSettings);
         $('#sr-summary-table').DataTable({
             paging: false
         });

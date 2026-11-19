@@ -36,7 +36,7 @@ Scheduled reports are configured on the external module configuration page. You 
 - The module utilises a scheduled task running every 10 minutes to check whether any scheduled report is due.
 - **It is strongly recommended that this module is configured to require a module-specific permission.**
 - **THIS MODULE MAKES IT POSSIBLE TO SEND PARTICIPANT IDENTIFYING DATA (PHI) TO PEOPLE THAT SHOULD NOT HAVE ACCESS TO IT. BE CAREFUL!**
-- The following "smart variables" may be utilised within the message body:
+- The following custom "smart variables" may be utilised within the message body:
   - [report-link]: Hyperlink to View Report page
   - [report-url]: View Report page URL
   - [download-link]: Hyperlink to download report from File Repository
